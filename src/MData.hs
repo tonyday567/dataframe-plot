@@ -5,8 +5,8 @@
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 
-
-module Kaggle where
+-- | A place to put functions until they get dumped or transferred elsewhere
+module MData where
 
 import DataFrame
 import Chart
@@ -20,10 +20,6 @@ import qualified Data.Vector.Unboxed.Mutable as VUM
 import GHC.Exts
 import GHC.Generics
 import Optics.Core
-
-go :: IO ()
-go = putStrLn "go"
-
 
 data BoxPlotOptions =
   BoxPlotOptions {
@@ -48,7 +44,6 @@ boxPlot o v = c
       set #hudOptions defaultHudOptions &
       over (#hudOptions % #axes) (Prelude.drop 1) &
       set #chartTree (named "boxplot" [l1,r2,r3,l4])
-
 
 {-
 hist :: [Double] -> Double -> [Int]
