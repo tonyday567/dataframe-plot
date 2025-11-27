@@ -144,7 +144,7 @@ It&rsquo;s a good chunky first example.
     
     ch = GlyphChart defaultGlyphStyle (Prelude.take 1000 $ zipWith Point (VU.toList c0) (VU.toList c1))
     
-    ch' = (mempty :: ChartOptions) & set #chartTree (named "scatterPlot" [ch]) & set #hudOptions defaultHudOptions
+    ch' = (mempty :: ChartOptions) & set #chartTree (named "scatterPlot" [ch]) & set #hudOptions defaultHudOptions & set (#hudOptions % #titles) [(Priority 8 (defaultTitleOptions "interest_rate" & set #place PlaceBottom & set (#style % #size) 0.06)),(Priority 8 (defaultTitleOptions "loan_amount" & set #place PlaceLeft & set (#style % #size) 0.06 & set #buffer 0.1))]
     
     writeChartOptions "other/scatter1.svg" ch'
     disp ch'
