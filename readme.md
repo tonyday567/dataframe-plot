@@ -36,24 +36,29 @@ Run in ghci using:
     import Data.ByteString.Char8 qualified as C
     import Data.Text qualified as T
     
-    df <- D.readCsv "other/test.csv"
     
     
     import Prettyprinter
     (display, quit) <- startChartServer (Just "kaggle")
     disp x = display $ x & set (#markupOptions % #markupHeight) (Just 250) & set (#hudOptions % #frames % ix 1 % #item % #buffer) 0.1
 
-    Setting phasers to stun... (port 9160) (ctrl-c to quit)
+    Setting phasegrhsc it>o  stun... (port 9160) (ctrl-c to quit)
 
+
+### Example chart display
+
+    :t lineExample
     disp lineExample
 
+    lineExample :: ChartOptions
     True
 
 This gives you a browser page and live charting capabilities.
 
-It&rsquo;s a good chunky first example.
 
-file read:
+### file read testing
+
+It&rsquo;s a good chunky first example.
 
     s <- readFile "other/test.csv"
     length s
@@ -68,16 +73,6 @@ file read:
     23021430
     0.144087667
 
-
-# game #1
-
-<https://www.kaggle.com/competitions/playground-series-s5e11>
-
-<https://ulwazi-exh9dbh2exbzgbc9.westus-01.azurewebsites.net/lab/tree/learning/applied-data-science-with-haskell/notebooks/week3/assignment3.ipynb>
-
-
-## dataframe readCsv
-
     (m,df) <- tickIO (D.readCsv "other/test.csv")
     print $ toSecs m
     :t df
@@ -85,9 +80,15 @@ file read:
     0.944859458
     df :: DataFrame
 
-    (m,s) <- tickIO (Prelude.readCsv "other/test.csv")
-    print $ toSecs m
-    :t df
+
+# s5e11
+
+<https://www.kaggle.com/competitions/playground-series-s5e11>
+
+
+## dataframe
+
+    df <- D.readCsv "data/s5e11/test.csv"
 
     describeColumns df
 
@@ -131,9 +132,7 @@ file read:
     [3.2,10.98,12.37,13.69,21.29]
 
 
-## configuration
-
-![img](https://hackage-content.haskell.org/package/chart-svg-0.8.2.1/docs/other/ast.svg)
+## box plot constructor
 
 A box plot is:
 
@@ -160,6 +159,23 @@ A box plot is:
 ![img](other/c.svg)
 
 
+## vertical version
+
+    qs = q4s
+    l1 = LineChart defaultLineStyle [[Point 0.5 (qs !! 0), Point 0.5 (qs !! 1)]]
+    l2 = LineChart defaultLineStyle [[Point 0.5 (qs !! 3), Point 0.5 (qs !! 4)]]
+    r1 = RectChart defaultRectStyle [Rect 0 1 (qs !! 1) (qs !! 2)]
+    r2 = RectChart defaultRectStyle [Rect 0 1 (qs !! 2) (qs !! 3)]
+
+    c = (mempty :: ChartOptions) & set (#markupOptions % #chartAspect) (FixedAspect 0.25) & set #hudOptions defaultHudOptions & over (#hudOptions % #axes) (Prelude.drop 1) & set #chartTree (named "boxplot" [l1,r1,r2,l2])
+    disp c
+    writeChartOptions "other/box1.svg" c
+
+    True
+
+![img](other/box1.svg)
+
+
 # reference
 
 Comparable python:
@@ -171,4 +187,8 @@ notebook best practice:
 
 converting to ipynb:
 <https://pandoc.org/installing.html>
+
+chart-svg api tree
+
+![img](https://hackage-content.haskell.org/package/chart-svg-0.8.2.1/docs/other/ast.svg)
 
