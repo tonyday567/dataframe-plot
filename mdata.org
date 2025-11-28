@@ -1,19 +1,24 @@
-* kaggle
+* mdata
 
-A reproducable build for dataHaskell kaggle.
+A reproducible build for dataHaskell.
 
-* build
+This repository is a reproducable build representing dataHaskell development.
 
-Built using:
+It contains:
 
-#+begin_src sh :results output
-cabal init  --non-interactive kaggle -d "base,dataframe,perf,chart-svg,prettychart"
-#+end_src
+- a [[https://github.com/mchav/dataframe][dataframe]] example taken from the first kaggle run.
+- [[https://github.com/tonyday567/perf][perf]] which is being used to measure performance of common usage patterns.
+- [[https://github.com/tonyday567/chart-svg][chart-svg]] | dataframe integration and development
+- a live chart build using [[https://github.com/tonyday567/prettychart][prettychart]]
+- some CI infrastructure to begin to measure integration.
 
-Run in ghci using:
+* Approximate Current Development State
+
+This snippet represents a current state being developed.
+
+non-reproduction is a bug.
 
 #+begin_src haskell-ng :results output
-import Prelude
 :set -XImportQualifiedPost
 :set -Wno-type-defaults
 :set -Wno-name-shadowing
@@ -21,6 +26,11 @@ import Prelude
 :set -XOverloadedStrings
 :set -XTupleSections
 :set -XQuasiQuotes
+
+
+-- base, text & bytestring encoding (compatability check, also)
+-- prettyprinter (dev help)
+import Prelude
 import Control.Category ((>>>))
 import Data.Function
 import Data.Maybe
@@ -28,25 +38,31 @@ import Data.Bool
 import Data.List qualified as List
 import Control.Monad
 import Data.Bifunctor
-import Chart
-import Prettychart
-import Chart.Examples
-import Optics.Core hiding ((|>))
-import Perf
 import Data.ByteString.Char8 qualified as C
 import Data.Text qualified as T
-
 import Prettyprinter
-(display, quit) <- startChartServer (Just "kaggle")
-disp x = display $ x & set (#markupOptions % #markupHeight) (Just 250) & set (#hudOptions % #frames % ix 1 % #item % #buffer) 0.1
 
-import DataFrame as D
-import DataFrame.Internal.Statistics
+-- dataframe imports
+import DataFrame qualified as D
+import DataFrame.Internal.Statistics qualified as D
 import qualified Data.Vector.Algorithms.Intro as VA
 import qualified Data.Vector.Unboxed as VU
 import qualified Data.Vector.Unboxed.Mutable as VUM
 
-import Kaggle
+-- common chart-svg imports
+import Chart
+import Prettychart
+import Chart.Examples
+import Optics.Core hiding ((|>))
+
+-- perf
+import Perf
+
+import MData
+
+-- example data
+df <- D.readCsv "data/s5e11/test.csv"
+
 #+end_src
 
 #+RESULTS:
@@ -55,17 +71,63 @@ Configuration is affected by the following files:
 - cabal.project
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
- - kaggle-0.1.0.0 (interactive) (lib) (file src/Kaggle.hs changed)
-Preprocessing library for kaggle-0.1.0.0...
+ - mdata-0.1.0.0 (interactive) (lib) (configuration changed)
+Configuring library for mdata-0.1.0.0...
+Preprocessing library for mdata-0.1.0.0...
 GHCi, version 9.12.2: https://www.haskell.org/ghc/  :? for help
-[1 of 1] Compiling Kaggle           ( src/Kaggle.hs, interpreted )
+[1 of 1] Compiling MData            ( src/MData.hs, interpreted )
 Ok, one module loaded.
-Setting pghhacsie>r s to stun... (port 9160) (ctrl-c to quit)
 #+end_example
 
 
-*** Example chart display
+* build notes
 
+** Initial build
+
+#+begin_src sh :results output
+cabal init  --non-interactive mdata -d "base,dataframe,perf,chart-svg,prettychart,vector"
+#+end_src
+
+** dataframe check
+
+#+begin_src haskell-ng :results output
+D.describeColumns df
+#+end_src
+
+#+RESULTS:
+#+begin_example
+-----------------------------------------------------------------
+    Column Name      | # Non-null Values | # Null Values |  Type
+---------------------|-------------------|---------------|-------
+        Text         |        Int        |      Int      |  Text
+---------------------|-------------------|---------------|-------
+grade_subgrade       | 254569            | 0             | Text
+loan_purpose         | 254569            | 0             | Text
+employment_status    | 254569            | 0             | Text
+education_level      | 254569            | 0             | Text
+marital_status       | 254569            | 0             | Text
+gender               | 254569            | 0             | Text
+interest_rate        | 254569            | 0             | Double
+loan_amount          | 254569            | 0             | Double
+credit_score         | 254569            | 0             | Int
+debt_to_income_ratio | 254569            | 0             | Double
+annual_income        | 254569            | 0             | Double
+id                   | 254569            | 0             | Int
+#+end_example
+
+#+begin_src haskell-ng :results output
+D.summarize df
+#+end_src
+
+** Live charts
+
+#+begin_src haskell-ng :results output
+(display, quit) <- startChartServer (Just "kaggle")
+disp x = display $ x & set (#markupOptions % #markupHeight) (Just 250) & set (#hudOptions % #frames % ix 1 % #item % #buffer) 0.1
+#+end_src
+
+#+RESULTS:
+: Setting phasers to stun... (port 9160) (ctrl-c to quit)
 
 #+begin_src haskell-ng :results output
 :t lineExample
@@ -78,7 +140,83 @@ disp lineExample
 
 This gives you a browser page and live charting capabilities.
 
-*** file read testing
+
+* chart dev
+
+** boxPlot example
+
+#+begin_src haskell-ng :results output
+c0 = (either (error . show) id) (D.columnAsDoubleVector "interest_rate" df)
+ch = boxPlot defaultBoxPlotOptions c0
+writeChartOptions "other/box1.svg" ch
+disp ch
+#+end_src
+
+#+RESULTS:
+: True
+
+[[file:other/box1.svg]]
+
+** scatterPlot example
+
+
+#+RESULTS:
+: True
+
+#+begin_src haskell-ng :results output
+c0 = (either (error . show) id) (D.columnAsDoubleVector "interest_rate" df)
+c1 = (either (error . show) id) (D.columnAsDoubleVector "loan_amount" df)
+
+ch = GlyphChart defaultGlyphStyle (Prelude.take 1000 $ zipWith Point (VU.toList c0) (VU.toList c1))
+
+ch' = (mempty :: ChartOptions) & set #chartTree (named "scatterPlot" [ch]) & set #hudOptions defaultHudOptions & set (#hudOptions % #titles) [(Priority 8 (defaultTitleOptions "interest_rate" & set #place PlaceBottom & set (#style % #size) 0.06)),(Priority 8 (defaultTitleOptions "loan_amount" & set #place PlaceLeft & set (#style % #size) 0.06 & set #buffer 0.1))]
+
+writeChartOptions "other/scatter1.svg" ch'
+disp ch'
+#+end_src
+
+#+RESULTS:
+: True
+
+
+Using MData.scatterPlot
+
+#+begin_src haskell-ng :results output
+v0 = (either (error . show) id) (D.columnAsDoubleVector "interest_rate" df)
+v1 = (either (error . show) id) (D.columnAsDoubleVector "loan_amount" df)
+ch = scatterPlot defaultScatterPlotOptions (Just "interest_rate", v0) (Just "loan_amount", v1)
+
+writeChartOptions "other/scatter1.svg" ch
+disp ch
+#+end_src
+
+#+RESULTS:
+: True
+
+[[file:other/scatter1.svg]]
+
+
+* reference
+
+Comparable python:
+
+https://www.kaggle.com/code/ravitejagonnabathula/predicting-loan-payback
+
+notebook best practice:
+
+https://marimo.io/blog/lessons-learned
+
+converting to ipynb:
+
+https://pandoc.org/installing.html
+
+chart-svg api tree
+
+https://hackage-content.haskell.org/package/chart-svg-0.8.2.1/docs/other/ast.svg
+
+* (deprecated) testing snippets
+
+** file read testing
 
 It's a good chunky first example.
 
@@ -112,98 +250,7 @@ print $ toSecs m
 : df :: DataFrame
 
 
-* s5e11
-
-https://www.kaggle.com/competitions/playground-series-s5e11
-
-** dataframe
-
-#+begin_src haskell-ng :results output
-df <- D.readCsv "data/s5e11/test.csv"
-#+end_src
-
-#+RESULTS:
-
-
-#+begin_src haskell-ng :results output
-describeColumns df
-#+end_src
-
-#+RESULTS:
-#+begin_example
------------------------------------------------------------------
-    Column Name      | # Non-null Values | # Null Values |  Type
----------------------|-------------------|---------------|-------
-        Text         |        Int        |      Int      |  Text
----------------------|-------------------|---------------|-------
-grade_subgrade       | 254569            | 0             | Text
-loan_purpose         | 254569            | 0             | Text
-employment_status    | 254569            | 0             | Text
-education_level      | 254569            | 0             | Text
-marital_status       | 254569            | 0             | Text
-gender               | 254569            | 0             | Text
-interest_rate        | 254569            | 0             | Double
-loan_amount          | 254569            | 0             | Double
-credit_score         | 254569            | 0             | Int
-debt_to_income_ratio | 254569            | 0             | Double
-annual_income        | 254569            | 0             | Double
-id                   | 254569            | 0             | Int
-#+end_example
-
-** boxPlot example
-
-#+begin_src haskell-ng :results output
-ir = (either (error . show) id) (columnAsDoubleVector "interest_rate" df)
-ch = boxPlot defaultBoxPlotOptions ir
-writeChartOptions "other/box1.svg" ch
-disp ch
-#+end_src
-
-#+RESULTS:
-: True
-
-
-[[file:other/box1.svg]]
-
-** scatterPlot example
-
-#+begin_src haskell-ng :results output
-c0 = (either (error . show) id) (columnAsDoubleVector "interest_rate" df)
-c1 = (either (error . show) id) (columnAsDoubleVector "loan_amount" df)
-
-ch = GlyphChart defaultGlyphStyle (Prelude.take 1000 $ zipWith Point (VU.toList c0) (VU.toList c1))
-
-ch' = (mempty :: ChartOptions) & set #chartTree (named "scatterPlot" [ch]) & set #hudOptions defaultHudOptions & set (#hudOptions % #titles) [(Priority 8 (defaultTitleOptions "interest_rate" & set #place PlaceBottom & set (#style % #size) 0.06)),(Priority 8 (defaultTitleOptions "loan_amount" & set #place PlaceLeft & set (#style % #size) 0.06 & set #buffer 0.1))]
-
-writeChartOptions "other/scatter1.svg" ch'
-disp ch'
-#+end_src
-
-#+RESULTS:
-: True
-
-[[file:other/scatter1.svg]]
-
-
-
-* reference
-
-Comparable python:
-
-https://www.kaggle.com/code/ravitejagonnabathula/predicting-loan-payback
-
-notebook best practice:
-https://marimo.io/blog/lessons-learned
-
-converting to ipynb:
-https://pandoc.org/installing.html
-
-chart-svg api tree
-
-https://hackage-content.haskell.org/package/chart-svg-0.8.2.1/docs/other/ast.svg
-
-* boxPlot testing
-
+Example data is  from https://www.kaggle.com/competitions/playground-series-s5e11
 ** get a Column and compute quartiles.
 
 #+begin_src haskell-ng :results output
@@ -279,3 +326,4 @@ disp c
 
 #+RESULTS:
 : True
+
