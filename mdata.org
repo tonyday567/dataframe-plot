@@ -10,6 +10,15 @@ This repo contains:
 - some pandoc conversion experiments: from org => markdown => ipynb
   (This is not catered for in nbconvert or jupytext wrt outputs)
 
+* pandocs
+
+We're after t3.md == t3b.md
+
+#+begin_src sh :results output
+pandoc -i t3.md -f markdown -o t3.ipynb -t ipynb
+pandoc -i t3.ipynb -f ipynb -o t3b.md -t markdown
+#+end_src
+
 * Imports
 
 #+begin_src haskell-ng :results output
@@ -70,8 +79,18 @@ dfTest <- D.readCsv "data/s5e11/test.csv"
 #+end_src
 
 #+RESULTS:
-: [1 of 1] Compiling MData            ( src/MData.hs, interpreted ) [Flags changed]
-: Ok, one module reloaded.
+#+begin_example
+Configuration is affected by the following files:
+- cabal.project
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - mdata-0.1.0.0 (interactive) (lib) (first run)
+Preprocessing library for mdata-0.1.0.0...
+GHCi, version 9.12.2: https://www.haskell.org/ghc/  :? for help
+[1 of 1] Compiling MData            ( src/MData.hs, interpreted )
+Ok, one module loaded.
+Ok, one module reloaded.
+#+end_example
 
 ** Live charts
 
@@ -83,7 +102,7 @@ disp x = display $ x & set (#markupOptions % #markupHeight) (Just 250) & set (#h
 #+end_src
 
 #+RESULTS:
-: Setting phasers to stun... (port 9160) (gchtcril>- c to quit)
+: Setting phasers to stun...g h(cpio>r t 9160) (ctrl-c to quit)
 
 http://localhost:9160/
 
@@ -122,6 +141,54 @@ man    | 31.0   | 0.3096903096903097
 camera | 16.0   | 0.15984015984015984
 tv     | 10.0   | 9.99000999000999e-2
 #+end_example
+
+*** expr method
+
+#+begin_src haskell-ng :results output
+df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
+v = F.col @Double "value"
+prop e = e / F.sum e
+df = D.derive "prop" (prop v) df0
+df
+#+end_src
+
+#+RESULTS:
+#+begin_example
+--------------------------------------
+ item  | value  |         prop
+-------|--------|---------------------
+[Char] | Double |        Double
+-------|--------|---------------------
+person | 20.0   | 0.16652789342214822
+woman  | 23.1   | 0.1923397169025812
+man    | 31.0   | 0.2581182348043297
+camera | 16.0   | 0.13322231473771856
+tv     | 10.0   | 8.326394671107411e-2
+#+end_example
+
+*** F.sum bug?
+
+#+begin_src haskell-ng :results output
+df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
+v = F.col @Double "value"
+df = D.derive "sum" (F.sum v) df0
+df
+#+end_src
+
+#+RESULTS:
+#+begin_example
+------------------------
+ item  | value  |  sum
+-------|--------|-------
+[Char] | Double | Double
+-------|--------|-------
+person | 20.0   | 120.1
+woman  | 23.1   | 120.1
+man    | 31.0   | 120.1
+camera | 16.0   | 120.1
+tv     | 10.0   | 120.1
+#+end_example
+
 
 ** stacked bar
 
