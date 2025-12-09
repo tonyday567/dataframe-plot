@@ -103,7 +103,7 @@ disp unitExample
 
 idiomatic dataframe style?
 
-``` {.haskell-ng results="output"}
+``` {.haskell-ng results="output" exports="both"}
 df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
 v = F.col @Double "value"
 xs = D.columnAsList @Double "value" df0
@@ -112,9 +112,22 @@ df = D.insert "prop" xs' df0
 df
 ```
 
+``` example
+-------------------------------------
+ item  | value  |        prop
+-------|--------|--------------------
+[Char] | Double |       Double
+-------|--------|--------------------
+person | 20.0   | 0.1998001998001998
+woman  | 23.1   | 0.2307692307692308
+man    | 31.0   | 0.3096903096903097
+camera | 16.0   | 0.15984015984015984
+tv     | 10.0   | 9.99000999000999e-2
+```
+
 ### expr method
 
-``` {.haskell-ng results="output"}
+``` {.haskell-ng results="output" exports="both"}
 df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
 v = F.col @Double "value"
 prop e = e / F.sum e
@@ -122,23 +135,54 @@ df = D.derive "prop" (prop v) df0
 df
 ```
 
+``` example
+--------------------------------------
+ item  | value  |         prop
+-------|--------|---------------------
+[Char] | Double |        Double
+-------|--------|---------------------
+person | 20.0   | 0.16652789342214822
+woman  | 23.1   | 0.1923397169025812
+man    | 31.0   | 0.2581182348043297
+camera | 16.0   | 0.13322231473771856
+tv     | 10.0   | 8.326394671107411e-2
+```
+
 ### F.sum bug?
 
-``` {.haskell-ng results="output"}
+``` {.haskell-ng results="output" exports="both"}
 df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
 v = F.col @Double "value"
 df = D.derive "sum" (F.sum v) df0
 df
 ```
 
+``` example
+------------------------
+ item  | value  |  sum
+-------|--------|-------
+[Char] | Double | Double
+-------|--------|-------
+person | 20.0   | 120.1
+woman  | 23.1   | 120.1
+man    | 31.0   | 120.1
+camera | 16.0   | 120.1
+tv     | 10.0   | 120.1
+```
+
 ## stacked bar
 
 ### version 1: single stacked vertical bar chart
 
-``` {.haskell-ng results="output"}
+``` {.haskell-ng results="output" exports="both"}
 ls = T.pack <$> D.columnAsList @String "item" df
 vs = D.columnAsList @Double "prop" df
 bd = BarData (fmap pure vs) ["item"] ls
+bd
+```
+
+``` example
+BarData {barData = [[0.16652789342214822],[0.1923397169025812],[0.2581182348043297],[0.13322231473771856],[8.326394671107411e-2]], barRowLabels = ["item"], barColumnLabels = ["person","woman","man","camera","tv"]}
 ```
 
 ``` {.haskell-ng file="other/bar1.svg" results="output graphics file" exports="both"}
