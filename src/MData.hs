@@ -18,7 +18,7 @@ import qualified Data.Vector.Unboxed as VU
 import qualified Data.Vector.Unboxed.Mutable as VUM
 import GHC.Exts
 import GHC.Generics
-import Optics.Core
+import Optics.Core hiding ((|>),(<|))
 import Data.Text qualified as T
 
 data BoxPlotOptions =
@@ -65,7 +65,7 @@ scatterPlot o (t0, v0) (t1, v1) = ch'
     ch' = (mempty :: ChartOptions) & set #chartTree (named "scatterPlot" [c]) & set #hudOptions ho
     ho = defaultHudOptions & maybe id (\tx -> over #titles ((Priority 8 (view #titleX o & set #text tx)):)) t0 & maybe id (\ty -> over #titles ((Priority 8 (view #titleY o & set #text ty)):)) t1
 
-
+data Secant = Secant { origin :: Point Double, radius :: Double, startAngle :: Double, endAngle :: Double } deriving (Generic)
 
 {-
 hist :: [Double] -> Double -> [Int]

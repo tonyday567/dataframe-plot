@@ -1,24 +1,21 @@
 * mdata
 
-A reproducible build for dataHaskell.
+This repo contains:
 
-This repository is a reproducable build representing dataHaskell development.
-
-It contains:
-
-- a [[https://github.com/mchav/dataframe][dataframe]] example taken from the first kaggle run.
+- a [[https://github.com/mchav/dataframe][dataframe]] example taken from a kaggle run.
 - [[https://github.com/tonyday567/perf][perf]] which is being used to measure performance of common usage patterns.
 - [[https://github.com/tonyday567/chart-svg][chart-svg]] | dataframe integration and development
 - a live chart build using [[https://github.com/tonyday567/prettychart][prettychart]]
 - some CI infrastructure to begin to measure integration.
 
-* Approximate Current Development State
+* Imports and Pragmas
 
 This snippet represents a current state being developed.
 
-non-reproduction is a bug.
-
 #+begin_src haskell-ng :results output
+:r
+
+:set -XNoImplicitPrelude
 :set -XImportQualifiedPost
 :set -Wno-type-defaults
 :set -Wno-name-shadowing
@@ -27,10 +24,9 @@ non-reproduction is a bug.
 :set -XTupleSections
 :set -XQuasiQuotes
 
-
 -- base, text & bytestring encoding (compatability check, also)
--- prettyprinter (dev help)
-import Prelude
+import Prelude as P
+import NumHask.Prelude qualified as N
 import Control.Category ((>>>))
 import Data.Function
 import Data.Maybe
@@ -40,10 +36,14 @@ import Control.Monad
 import Data.Bifunctor
 import Data.ByteString.Char8 qualified as C
 import Data.Text qualified as T
+
+-- prettyprinter (dev help)
 import Prettyprinter
 
--- dataframe imports
+-- common dataframe imports
 import DataFrame qualified as D
+import DataFrame.Functions qualified as F
+import DataFrame.Internal.Expression qualified as D
 import DataFrame.Internal.Statistics qualified as D
 import qualified Data.Vector.Algorithms.Intro as VA
 import qualified Data.Vector.Unboxed as VU
@@ -53,15 +53,19 @@ import qualified Data.Vector.Unboxed.Mutable as VUM
 import Chart
 import Prettychart
 import Chart.Examples
-import Optics.Core hiding ((|>))
+import Optics.Core hiding ((|>),(<|))
+import Control.Lens qualified as Lens
+import Data.Data.Lens qualified as Lens
 
--- perf
+-- dev helpers
 import Perf
+import Flow
 
+-- functions not yet transferred elsewhere
 import MData
 
--- example data
-df <- D.readCsv "data/s5e11/test.csv"
+-- example data from https://www.kaggle.com/competitions/playground-series-s5e11
+dfTest <- D.readCsv "data/s5e11/test.csv"
 
 #+end_src
 
@@ -71,13 +75,154 @@ Configuration is affected by the following files:
 - cabal.project
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
- - mdata-0.1.0.0 (interactive) (lib) (configuration changed)
-Configuring library for mdata-0.1.0.0...
+ - mdata-0.1.0.0 (interactive) (lib) (first run)
 Preprocessing library for mdata-0.1.0.0...
 GHCi, version 9.12.2: https://www.haskell.org/ghc/  :? for help
 [1 of 1] Compiling MData            ( src/MData.hs, interpreted )
 Ok, one module loaded.
+Ok, one module reloaded.
 #+end_example
+
+** Live charts
+
+This gives you a browser page and live charting capabilities.
+
+#+begin_src haskell-ng :results output
+(display, quit) <- startChartServer (Just "mdata")
+disp x = display $ x & set (#markupOptions % #markupHeight) (Just 250) & set (#hudOptions % #frames % ix 1 % #item % #buffer) 0.1
+#+end_src
+
+#+RESULTS:
+: Setting phgahsceir>s  to stun... (port 9160) (ctrl-c to quit)
+
+http://localhost:9160/
+
+testing, testing; one, two, three
+
+#+begin_src haskell-ng :results output
+disp unitExample
+#+end_src
+
+#+RESULTS:
+: True
+
+** piePlot
+
+idiomatic dataframe style?
+
+#+begin_src haskell-ng :results output
+df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
+v = F.col @Double "value"
+xs = D.columnAsList @Double "value" df0
+xs' = (/ sum xs) <$> xs
+df = D.insert "prop" xs' df0
+df
+#+end_src
+
+#+RESULTS:
+#+begin_example
+-------------------------------------
+ item  | value  |        prop
+-------|--------|--------------------
+[Char] | Double |       Double
+-------|--------|--------------------
+person | 20.0   | 0.1998001998001998
+woman  | 23.1   | 0.2307692307692308
+man    | 31.0   | 0.3096903096903097
+camera | 16.0   | 0.15984015984015984
+tv     | 10.0   | 9.99000999000999e-2
+#+end_example
+
+** stacked bar
+
+*** version 1: single stacked vertical bar chart
+
+#+begin_src haskell-ng :results output
+ls = T.pack <$> D.columnAsList @String "item" df
+vs = D.columnAsList @Double "prop" df
+bd = BarData (fmap pure vs) ["item"] ls
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell-ng :file other/bar1.svg :results output graphics file :exports both
+bc = barChart (defaultBarOptions |> set #displayValues False |> set #barStacked Stacked |> set (#barRectStyles % each % #borderSize) 0) bd
+disp bc
+#+end_src
+
+#+RESULTS:
+[[file:other/bar1.svg]]
+
+*** version 2: skinny
+
+#+begin_src haskell-ng :file other/bar2.svg :results output graphics file :exports both
+bc' = Lens.transformOnOf Lens.template Lens.uniplate (over chroma' (*1.5) .> over opac' (*0.6)) bc |> set (#markupOptions % #chartAspect) (FixedAspect 0.4)
+
+disp (bc')
+#+end_src
+
+#+RESULTS:
+[[file:other/bar2.svg]]
+
+*** version 3: remove legend and embed labels
+
+#+begin_src haskell-ng
+
+acc0 = List.scanl' (+) 0 vs <> [1]
+mids = zipWith (\a0 a1 -> (a0+a1)/2) acc0 (List.drop 1 acc0)
+ct = zipWith (\c (t,a) -> TextChart (defaultTextStyle |> set #size 0.05 |> set #color (palette c |> over lightness' (*0.6))) [(t, Point zero (0.5-a))]) [0..] (zip ls mids)
+
+bc'' = bc' |> set (#hudOptions % #legends) mempty |> over #chartTree (<> named "labels" ct)
+
+disp (bc'')
+#+end_src
+
+#+RESULTS:
+: True
+
+
+** pie secants
+
+Pie chart convention starts at the y-axis and lays out secant slices clockwise.
+
+`ra` maps (0,1) (the proportional pie slice) into a point on a unit circle (by this convetion).
+
+#+begin_src haskell-ng :results output
+ra = (+(-0.25)) .> (*(-2 * pi)) .> ray @(Point Double)
+secantPie (Secant o r a0 a1) = singletonPie o (ArcPosition (o N.+ ra a0) (o N.+ ra a1) (ArcInfo (Point r r) 0 False True))
+#+end_src
+
+#+RESULTS:
+
+This is a very common scan for a Column.
+
+#+begin_src haskell-ng :results output
+acc0 = List.scanl' (+) 0 vs <> [1]
+mids = zipWith (\a0 a1 -> (a0+a1)/2) acc0 (List.drop 1 acc0)
+
+xs = zipWith (\a0 a1 -> secantPie (Secant (0.05 N.*| ra ((a0+a1)/2)) one a0 a1)) acc0 (List.drop 1 acc0)
+
+cs = zipWith (\c x -> PathChart (defaultPathStyle |> set #borderSize 0 |> set #color (paletteO c 0.3)) x) [0..] xs
+
+ct = zipWith (\c (t,a) -> TextChart (defaultTextStyle |> set #size 0.05 |> set #color (palette c & over lightness' (*0.6))) [(t, 0.7 N.*| ra a)]) [0..] (zip ls mids)
+co = (mempty :: ChartOptions) & set (#markupOptions % #chartAspect) ChartAspect & set #chartTree ((cs <> ct) |> unnamed)
+disp co
+writeChartOptions "other/pie.svg" co
+#+end_src
+
+#+RESULTS:
+: True
+
+
+[[file:other/pie.svg]]
+
+
+* jupytext
+
+#+begin_src sh :results output
+jupytext --set-formats ipynb,md:myst t1.ipynb
+#+end_src
+
 
 
 * build notes
@@ -119,27 +264,24 @@ id                   | 254569            | 0             | Int
 D.summarize df
 #+end_src
 
-** Live charts
-
-#+begin_src haskell-ng :results output
-(display, quit) <- startChartServer (Just "kaggle")
-disp x = display $ x & set (#markupOptions % #markupHeight) (Just 250) & set (#hudOptions % #frames % ix 1 % #item % #buffer) 0.1
-#+end_src
-
 #+RESULTS:
-: Setting phasers to stun... (port 9160) (ctrl-c to quit)
-
-#+begin_src haskell-ng :results output
-:t lineExample
-disp lineExample
-#+end_src
-
-#+RESULTS:
-: lineExample :: ChartOptions
-: True
-
-This gives you a browser page and live charting capabilities.
-
+#+begin_example
+--------------------------------------------------------------------------------------------------------
+Statistic |    id    | annual_income | debt_to_income_ratio | credit_score | loan_amount | interest_rate
+----------|----------|---------------|----------------------|--------------|-------------|--------------
+  Text    |  Double  |    Double     |        Double        |    Double    |   Double    |    Double
+----------|----------|---------------|----------------------|--------------|-------------|--------------
+Count     | 254569.0 | 254569.0      | 254569.0             | 254569.0     | 254569.0    | 254569.0
+Mean      | 721278.0 | 48233.08      | 0.12                 | 681.04       | 15016.75    | 12.35
+Minimum   | 593994.0 | 6011.77       | 1.0e-2               | 395.0        | 500.05      | 3.2
+25%       | 657636.0 | 27950.3       | 7.0e-2               | 646.0        | 10248.58    | 10.98
+Median    | 721278.0 | 46528.98      | 0.1                  | 683.0        | 15000.22    | 12.37
+75%       | 784920.0 | 61149.44      | 0.16                 | 719.0        | 18831.46    | 13.69
+Max       | 848562.0 | 380653.94     | 0.63                 | 849.0        | 48959.26    | 21.29
+StdDev    | 73487.88 | 26719.66      | 7.0e-2               | 55.62        | 6922.17     | 2.02
+IQR       | 127284.0 | 33199.14      | 8.0e-2               | 73.0         | 8582.88     | 2.71
+Skewness  | 0.0      | 1.72          | 1.42                 | -0.17        | 0.21        | 4.0e-2
+#+end_example
 
 * chart dev
 
@@ -195,7 +337,6 @@ disp ch
 
 [[file:other/scatter1.svg]]
 
-
 * reference
 
 Comparable python:
@@ -209,6 +350,10 @@ https://marimo.io/blog/lessons-learned
 converting to ipynb:
 
 https://pandoc.org/installing.html
+
+#+begin_src sh :results output
+pandoc readme.md -o mdata.ipynb
+#+end_src
 
 chart-svg api tree
 

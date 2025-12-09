@@ -105,5 +105,8 @@ library
     prettyprinter,
     vector,
     vector-algorithms,
+    flow,
+    lens,
+    numhask,
   exposed-modules:
     MData
