@@ -162,12 +162,11 @@ rend "other/histogram3.svg" h3
 [[file:other/histogram3.svg]]
 
 #+begin_src haskell-ng :results output
-:t flipRect
+:t N.flipAxes
 #+end_src
 
 #+RESULTS:
-: <interactive>:1:1: error: [GHC-88464]
-:     Variable not in scope: flipRect
+: N.flipAxes :: Rect a -> Rect a
 
 
 - Line
