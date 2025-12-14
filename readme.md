@@ -19,90 +19,6 @@ Charts for dataframes built with chart-svg.
 
 # Next Examples
 
--   [ ] reduce this list to minimum set
-
-    :r
-    
-    :set -XNoImplicitPrelude
-    :set -XImportQualifiedPost
-    :set -Wno-type-defaults
-    :set -Wno-name-shadowing
-    :set -XOverloadedLabels
-    :set -XOverloadedStrings
-    :set -XTupleSections
-    :set -XQuasiQuotes
-    
-    -- base, text & bytestring encoding (compatability check, also)
-    import Prelude as P
-    import NumHask.Prelude qualified as N
-    import NumHask.Space qualified as N
-    import Control.Category ((>>>))
-    import Data.Function
-    import Data.Maybe
-    import Data.Bool
-    import Data.List qualified as List
-    import Control.Monad
-    import Data.Bifunctor
-    import Data.ByteString.Char8 qualified as C
-    import Data.Text qualified as T
-    
-    -- prettyprinter (dev help)
-    import Prettyprinter
-    
-    -- common dataframe imports
-    import DataFrame qualified as D
-    import DataFrame.Functions qualified as F
-    import DataFrame.Internal.Expression qualified as D
-    import DataFrame.Internal.Statistics qualified as D
-    import qualified Data.Vector.Algorithms.Intro as VA
-    import qualified Data.Vector.Unboxed as VU
-    import qualified Data.Vector.Unboxed.Mutable as VUM
-    
-    -- common chart-svg imports
-    import Chart
-    import Prettychart
-    import Chart.Examples
-    import Optics.Core hiding ((|>),(<|))
-    import Control.Lens qualified as Lens
-    import Data.Data.Lens qualified as Lens
-    
-    -- random variates
-    import System.Random.Stateful
-    import System.Random.MWC
-    import System.Random.MWC.Distributions
-    
-    -- dev helpers
-    import Perf
-    import Flow
-    
-    -- dataframe chart-svg interface
-    import DataFrame.Plot
-    
-    -- example data from https://www.kaggle.com/competitions/playground-series-s5e11
-    dfTest <- D.readCsv "other/s5e11/test.csv"
-    v = F.col @Double "value"
-    df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
-    xs = D.columnAsList @Double "value" df0
-    xs' = (/ sum xs) <$> xs
-    df = D.insert "prop" xs' df0
-    
-    -- initialize a random seed
-    -- uniformRM (0,1) g :: IO Double
-    g <- initialize $ VU.fromList [1,2,3]
-    
-    rend = writeChartOptions
-
-    Configuration is affected by the following files:
-    - cabal.project
-    Build profile: -w ghc-9.12.2 -O1
-    In order, the following will be built (use -v for more details):
-     - dataframe-plot-0.1.0.0 (interactive) (lib) (first run)
-    Preprocessing library for dataframe-plot-0.1.0.0...
-    GHCi, version 9.12.2: https://www.haskell.org/ghc/  :? for help
-    [1 of 1] Compiling DataFrame.Plot   ( src/DataFrame/Plot.hs, interpreted )
-    Ok, one module loaded.
-    Ok, one module reloaded.
-
 -   Histogram
 
 At defaults
@@ -143,10 +59,9 @@ skinny, with a title & no axis
 
 ![img](other/histogram3.svg)
 
-    :t flipRect
+    :t N.flipAxes
 
-    <interactive>:1:1: error: [GHC-88464]
-        Variable not in scope: flipRect
+    N.flipAxes :: Rect a -> Rect a
 
 -   Line
     -   multiple series, markers, dashed lines
@@ -155,7 +70,6 @@ skinny, with a title & no axis
     single scatter
     multi-scatter
     multi-glyphed
-
 -   Bar
     -   simple, grouped, stacked, horizontal
 -   Pie
@@ -283,4 +197,117 @@ which can mean that the x and y data for Points is in columns 0 and 1 and the co
     -   explain how Chart, ChartTree & ChartOptions combine.
     -   `vert`, `hori`, `stack` need work
     -   sharing axes is possible but might be fragile.
+
+
+# Development
+
+    :r
+    
+    :set -XNoImplicitPrelude
+    :set -XImportQualifiedPost
+    :set -Wno-type-defaults
+    :set -Wno-name-shadowing
+    :set -XOverloadedLabels
+    :set -XOverloadedStrings
+    :set -XTupleSections
+    :set -XQuasiQuotes
+    
+    -- base, text & bytestring encoding (compatability check, also)
+    import Prelude as P
+    import NumHask.Prelude qualified as N
+    import NumHask.Space qualified as N
+    import Control.Category ((>>>))
+    import Data.Function
+    import Data.Maybe
+    import Data.Bool
+    import Data.List qualified as List
+    import Control.Monad
+    import Data.Bifunctor
+    import Data.ByteString.Char8 qualified as C
+    import Data.Text qualified as T
+    
+    -- prettyprinter (dev help)
+    import Prettyprinter
+    
+    -- common dataframe imports
+    import DataFrame qualified as D
+    import DataFrame.Functions qualified as F
+    import DataFrame.Internal.Expression qualified as D
+    import DataFrame.Internal.Statistics qualified as D
+    import qualified Data.Vector.Algorithms.Intro as VA
+    import qualified Data.Vector.Unboxed as VU
+    import qualified Data.Vector.Unboxed.Mutable as VUM
+    
+    -- common chart-svg imports
+    import Chart
+    import Prettychart
+    import Chart.Examples
+    import Optics.Core hiding ((|>),(<|))
+    import Control.Lens qualified as Lens
+    import Data.Data.Lens qualified as Lens
+    
+    -- random variates
+    import System.Random.Stateful
+    import System.Random.MWC
+    import System.Random.MWC.Distributions
+    
+    -- dev helpers
+    import Perf
+    import Flow
+    
+    -- dataframe chart-svg interface
+    import DataFrame.Plot
+    
+    -- example data from https://www.kaggle.com/competitions/playground-series-s5e11
+    dfTest <- D.readCsv "other/s5e11/test.csv"
+    v = F.col @Double "value"
+    df0 = mempty |> D.insert "item" ["person","woman","man","camera","tv"] |> D.insert "value" [20,23.1,31,16,10]
+    xs = D.columnAsList @Double "value" df0
+    xs' = (/ sum xs) <$> xs
+    df = D.insert "prop" xs' df0
+    
+    -- initialize a random seed
+    -- uniformRM (0,1) g :: IO Double
+    g <- initialize $ VU.fromList [1,2,3]
+    
+    rend = writeChartOptions
+
+
+## Live charts
+
+This gives you a browser page and live charting capabilities.
+
+    -- live charts
+    (display, quit) <- startChartServer Nothing
+    disp x = display $ x & set (#markupOptions % #markupHeight) (Just 250) & set (#hudOptions % #frames % ix 1 % #item % #buffer) 0.1
+
+    Setting phasergsh ctio>  stun... (port 9160)g h(ccit>r l-c to quit)
+
+<http://localhost:9160/>
+
+testing, testing; one, two, three
+
+    disp unitExample
+
+    True
+
+# reference
+
+Comparable python:
+
+<https://www.kaggle.com/code/ravitejagonnabathula/predicting-loan-payback>
+
+notebook best practice:
+
+<https://marimo.io/blog/lessons-learned>
+
+converting to ipynb:
+
+<https://pandoc.org/installing.html>
+
+    pandoc readme.md -o mdata.ipynb
+
+chart-svg api tree
+
+![img](https://hackage-content.haskell.org/package/chart-svg-0.8.2.1/docs/other/ast.svg)
 
