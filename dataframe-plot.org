@@ -152,7 +152,7 @@ rend "other/histogram2.svg" h2
 h3 = h |> over (#chartTree % chart' % #chartData % rectData') (fmap (fmap N.flipAxes))
 
 disp h3
-rend "other/histogram3.svg" h2
+rend "other/histogram3.svg" h3
 
 #+end_src
 
